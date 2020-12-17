@@ -97,13 +97,12 @@ def train(args):
             """ Update discriminator on each sample from Q(z|s) """
             s = torch.randn(args.batch_size, args.s).to(args.device)
             z = torch.randn(args.batch_size, args.z).to(args.device)
-            full_z = torch.randn(args.z*args.ngen, args.batch_size)
+            # full_z = torch.randn(args.z*args.ngen, args.batch_size)
             codes = mixer(s)
             d_loss, d_q = ops.calc_d_loss(args, Dz, z, codes)
             d_loss = d_loss * args.beta
             optimD.zero_grad()
             d_loss.backward(retain_graph=True)
-            optimD.step()
 
             """ generate weights ~ G(Q(s)) """
             params = generator(codes)
@@ -119,11 +118,14 @@ def train(args):
                 clf_loss += loss
 
             """ calculate total loss on Q and G """
-            one_qz = torch.ones((args.batch_size*args.ngen, 1), requires_grad=True).to(args.device)
-            log_qz = ops.log_density(torch.ones(args.batch_size*args.ngen, 1), 2).view(-1, 1).to(args.device)
-            Q_loss = F.binary_cross_entropy_with_logits(d_q+log_qz, one_qz)
+            batch_ngen=args.batch_size*args.ngen
+            one_qz = torch.ones((batch_ngen, 1), requires_grad=True).to(args.device)
+            log_qz = ops.log_density(torch.ones(batch_ngen, 1), 2).view(-1, 1).to(args.device)
+            dqz=d_q.clone() +log_qz.clone()
+            Q_loss = F.binary_cross_entropy_with_logits(dqz, one_qz)
             G_loss = clf_loss / args.batch_size
-            QG_loss = Q_loss + G_loss
+
+            QG_loss = Q_loss.clone() + G_loss
             QG_loss.backward()
             
             optimQ.step()

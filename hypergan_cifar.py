@@ -112,7 +112,7 @@ class HyperGANTrainer(object):
         self.best_loss, self.best_acc = best_test_loss, best_test_acc
 
         one = torch.FloatTensor([1]).cuda()
-        mone = (one * -1).cuda()
+        # mone = (one * -1).cuda()
         if self.pretrain_e:
             print ("==> pretraining encoder")
             self.pretrain_encoder()
